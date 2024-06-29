@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sqlmagick"
+version = "0.1.0"
+authors = [
+    {name = "Øyvind", email = "lalala@lalala.com"},
+]
+description = "Query excel data with SQL"
+readme = "README.md"
+license = {text = "MIT"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+keywords = ["sql", "database", "python"]
+dependencies = [
+    "pandas",
+    "sqlalchemy",
+    "tqdm"
+]
+
+[project.optional-dependencies]
+dev = ["black", "pylint"]
+
+[project.scripts]
+sqlmagick = "sqlmagick.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "sqlmagick.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sqlmagick*"]
