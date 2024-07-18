@@ -22,7 +22,8 @@ dependencies = [
     "sqlalchemy",
     "tqdm",
     "jupyter",
-    "ipywidgets"
+    "ipywidgets",
+    "pyarrow"
 ]
 
 [project.optional-dependencies]

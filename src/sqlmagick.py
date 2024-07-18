@@ -1,26 +1,23 @@
 """
-Magic functions for working with SQL and Excel files in Jupyter notebooks.
-
+Magic functions for working with SQL, Excel, and Parquet files in Jupyter notebooks.
 
 How to load from notebook: %load_ext sqlmagick
 
 %%sql - Execute SQL queries and return the result as a Pandas DataFrame
 
-%%dump_xls - Load Excel files from a folder for querying. Parameters: folder path
-            TIP: if you just want to use the current directory, just use %%dump_xls with a dot (.)
-            
-%%dump_df - Load a DataFrame print(f"Path provided: {cell_content}")
-    into the database. Parameters: DataFrame
+%%dump_files - Load Excel, CSV, and Parquet files from a folder for querying. Parameters: folder path
+               TIP: if you just want to use the current directory, just use %%dump_files with a dot (.)
+
+%%dump_df - Load a DataFrame into the database. Parameters: DataFrame
 
 %%load_df - Load a table into a dataframe in the notebook. Parameters: table name
 
-        use your_df = _ to assign the results to a dataframe locally
-
+            use your_df = _ to assign the results to a dataframe locally
 
 %%createtemp - Create a temporary table in the database. Parameters: table name, SQL
-
 """
-import os 
+
+import os
 import pandas as pd
 import traceback
 import sqlite3
@@ -28,7 +25,7 @@ from IPython.core.magic import (register_line_magic, register_cell_magic, regist
 from IPython import get_ipython
 from IPython.display import display, HTML
 import re
-from tqdm.notebook import tqdm  # Update import
+from tqdm.notebook import tqdm
 
 @register_cell_magic
 @needs_local_scope
@@ -52,16 +49,14 @@ from IPython.core.magic import register_cell_magic, needs_local_scope
 
 @register_cell_magic
 @needs_local_scope
-def dump_xls(line, cell, local_ns=None):
-    cell_content = cell.strip()
-    
-    root_dir = cell.strip()  # The directory to scan for Excel files, passed in the cell
+def dump_files(line, cell, local_ns=None):
+    root_dir = cell.strip()  # The directory to scan for files, passed in the cell
     
     db_path = 'sqlmagick.db'
     
     # Connect to the SQLite database
     with sqlite3.connect(db_path) as conn:
-        files_to_process = [os.path.join(root, file) for root, _, files in os.walk(root_dir) for file in files if file.endswith(('.xlsx', '.xls', '.csv'))]
+        files_to_process = [os.path.join(root, file) for root, _, files in os.walk(root_dir) for file in files if file.endswith(('.xlsx', '.xls', '.csv', '.parquet'))]
         
         # Initialize tqdm progress bar
         with tqdm(total=len(files_to_process), desc="Processing files", unit="file") as pbar:
@@ -79,7 +74,7 @@ def dump_xls(line, cell, local_ns=None):
                                 df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
                                 # Create a normalized table name based on the file and sheet names
                                 table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}_{sheet_name.replace(' ', '_')}"
-                                # remove <>
+                                # Remove <>
                                 table_name = re.sub(r'<|>', '', table_name)
                                 print(f"Loading {sheet_name} from {file} into {table_name}")
                                 if len(df.columns) == 0:
@@ -92,28 +87,44 @@ def dump_xls(line, cell, local_ns=None):
                             except Exception as e:
                                 print(f"Failed to load sheet {sheet_name} from {file}: {str(e)}")
                                 display(HTML(f"<span style='background-color: yellow;'>Warning: Failed to load sheet {sheet_name} from {file}</span>"))
-                                # show stack trace
+                                # Show stack trace
                                 traceback.print_exc()
                     
                     except Exception as e:
                         print(f"Failed to load {file_path}: {str(e)}")
-                        # show stack trace
+                        # Show stack trace
                         traceback.print_exc()
 
                 elif file.endswith(".csv"):
                     try:
-                        # Load each sheet into the database
                         df = pd.read_csv(file_path)
                         # Sanitize column names
                         df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
-                        # Create a normalized table name based on the file and sheet names
+                        # Create a normalized table name based on the file name
                         table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}"
                         df.to_sql(table_name, conn, if_exists='replace', index=False)
                         print(f"Loaded {file} into {table_name}")
                 
                     except Exception as e:
                         print(f"Failed to load {file_path}: {str(e)}")
+                        # Show stack trace
+                        traceback.print_exc()
+
+                elif file.endswith(".parquet"):
+                    try:
+                        df = pd.read_parquet(file_path)
+                        # Sanitize column names
+                        df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
+                        # Create a normalized table name based on the file name
+                        table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}"
+                        df.to_sql(table_name, conn, if_exists='replace', index=False)
+                        print(f"Loaded {file} into {table_name}")
                 
+                    except Exception as e:
+                        print(f"Failed to load {file_path}: {str(e)}")
+                        # Show stack trace
+                        traceback.print_exc()
+
                 # Update the progress bar
                 pbar.update(1)
 

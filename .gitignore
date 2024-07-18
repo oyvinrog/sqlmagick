@@ -3,3 +3,4 @@ src/sqlmagick.egg-info/
 src/test.ipynb
 *.csv
 *.db
+*.parquet
