@@ -20,7 +20,9 @@ keywords = ["sql", "database", "python"]
 dependencies = [
     "pandas",
     "sqlalchemy",
-    "tqdm"
+    "tqdm",
+    "jupyter",
+    "ipywidgets"
 ]
 
 [project.optional-dependencies]

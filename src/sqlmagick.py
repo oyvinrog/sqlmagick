@@ -7,7 +7,10 @@ How to load from notebook: %load_ext sqlmagick
 %%sql - Execute SQL queries and return the result as a Pandas DataFrame
 
 %%dump_xls - Load Excel files from a folder for querying. Parameters: folder path
-%%dump_df - Load a DataFrame into the database. Parameters: DataFrame
+            TIP: if you just want to use the current directory, just use %%dump_xls with a dot (.)
+            
+%%dump_df - Load a DataFrame print(f"Path provided: {cell_content}")
+    into the database. Parameters: DataFrame
 
 %%load_df - Load a table into a dataframe in the notebook. Parameters: table name
 
@@ -50,7 +53,10 @@ from IPython.core.magic import register_cell_magic, needs_local_scope
 @register_cell_magic
 @needs_local_scope
 def dump_xls(line, cell, local_ns=None):
+    cell_content = cell.strip()
+    
     root_dir = cell.strip()  # The directory to scan for Excel files, passed in the cell
+    
     db_path = 'sqlmagick.db'
     
     # Connect to the SQLite database

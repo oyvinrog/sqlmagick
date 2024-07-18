@@ -1,2 +1,5 @@
 src/__pycache__/
 src/sqlmagick.egg-info/
+src/test.ipynb
+*.csv
+*.db
