@@ -3,7 +3,9 @@ Magic functions for working with SQL, Excel, and Parquet files in Jupyter notebo
 
 How to load from notebook: %load_ext sqlmagick
 
-%%sql - Execute SQL queries and return the result as a Pandas DataFrame
+%%sql - Execute SQL queries and return the result as a Pandas DataFrame.
+    
+                Parameters: optional file path for saving the result as a Parquet file
 
 %%dump_files - Load Excel, CSV, and Parquet files from a folder for querying. Parameters: folder path
                TIP: if you just want to use the current directory, just use %%dump_files with a dot (.)
@@ -30,13 +32,23 @@ from tqdm.notebook import tqdm
 @register_cell_magic
 @needs_local_scope
 def sql(line, cell, local_ns=None):
-    # Assuming we connect to an SQLite in-memory database
+    # Split the line to get any potential file path for dumping the result
+    args = line.split()
+    parquet_file = None
+    if len(args) > 0:
+        # Assuming the first argument is the file path if provided
+        parquet_file = args[0]
+    
     with sqlite3.connect('sqlmagick.db') as conn:
-        
         query = cell.strip()  # SQL query from the cell
-        pd.read_sql_query(query, conn)
         result = pd.read_sql_query(query, conn)
-        return result
+        
+        if parquet_file:
+            # Save result to a Parquet file
+            result.to_parquet(parquet_file)
+            print(f"Query result saved to {parquet_file}")
+        else:
+            return result
 
 def load_ipython_extension(ipython):
     # Register the magic function with IPython

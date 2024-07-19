@@ -2,6 +2,9 @@
 
 Navigate to the root folder and run: "pip install -e ."
 
+on centrally managed Linux distributions, I have no clue how to handle this.
+Just copy sqlmagick.py into the same folder as your .ipynb file
+
 
 ## Example usage
 
@@ -21,6 +24,17 @@ C:\temp\errorparser
 %%sql
 
 select * from output_sheet1
+
+
+----Cell 4--------
+In this example, we output the results to strange_errors.parquet
+
+%%sql strange_errors.parquet
+
+select * from output_sheet1
+where error_message like '%infinite recursion%'
+
+
 
 ### Creating temp tables
 
