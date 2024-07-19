@@ -2,8 +2,15 @@
 
 Navigate to the root folder and run: "pip install -e ."
 
-on centrally managed Linux distributions, I have no clue how to handle this.
-Just copy sqlmagick.py into the same folder as your .ipynb file
+On centrally managed Linux distributions:
+
+```
+sudo apt-get update
+sudo apt-get install python3-venv
+python3 -m venv venv
+source venv/bin/activate
+pip install git+https://github.com/oyvinrog/sqlmagick.git
+```
 
 
 ## Example usage

@@ -4,3 +4,4 @@ src/test.ipynb
 *.csv
 *.db
 *.parquet
+*.pyc
