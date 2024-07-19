@@ -7,15 +7,15 @@ SQLMagick allows you to easily query various file types within your filesystem, 
 
 ## Installation
 
-To install SQLMagick, navigate to the root folder of your project and run the following command:
+To install SQLMagick:
 
-```
-pip install -e .
+```bash
+pip install git+https://github.com/oyvinrog/sqlmagick.git
 ```
 
-For centrally managed Linux distributions, follow these steps:
+For centrally managed Linux distributions, set up a virtual environment:
 
-```
+```bash
 sudo apt-get update
 sudo apt-get install python3-venv
 python3 -m venv venv
