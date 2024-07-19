@@ -10,6 +10,8 @@ How to load from notebook: %load_ext sqlmagick
 %%dump_files - Load Excel, CSV, and Parquet files from a folder for querying. Parameters: folder path
                TIP: if you just want to use the current directory, just use %%dump_files with a dot (.)
 
+               Wildcards are supported, e.g., %%dump_files *.csv will load all CSV files in the current directory.
+
 %%dump_df - Load a DataFrame into the database. Parameters: DataFrame
 
 %%load_df - Load a table into a dataframe in the notebook. Parameters: table name
@@ -28,6 +30,7 @@ from IPython import get_ipython
 from IPython.display import display, HTML
 import re
 from tqdm.notebook import tqdm
+import glob
 
 @register_cell_magic
 @needs_local_scope
@@ -54,21 +57,19 @@ def load_ipython_extension(ipython):
     # Register the magic function with IPython
     ipython.register_magic_function(sql, 'cell')
 
-import os
-import pandas as pd
-import sqlite3
-from IPython.core.magic import register_cell_magic, needs_local_scope
 
 @register_cell_magic
 @needs_local_scope
 def dump_files(line, cell, local_ns=None):
-    root_dir = cell.strip()  # The directory to scan for files, passed in the cell
+    pattern = cell.strip()  # The directory to scan for files, passed in the cell
     
     db_path = 'sqlmagick.db'
     
     # Connect to the SQLite database
     with sqlite3.connect(db_path) as conn:
-        files_to_process = [os.path.join(root, file) for root, _, files in os.walk(root_dir) for file in files if file.endswith(('.xlsx', '.xls', '.csv', '.parquet'))]
+        # Use glob to match patterns and collect files
+        files_to_process = glob.glob(pattern, recursive=True)
+        files_to_process = [file for file in files_to_process if file.endswith(('.xlsx', '.xls', '.csv', '.parquet'))]
         
         # Initialize tqdm progress bar
         with tqdm(total=len(files_to_process), desc="Processing files", unit="file") as pbar:
@@ -139,7 +140,6 @@ def dump_files(line, cell, local_ns=None):
 
                 # Update the progress bar
                 pbar.update(1)
-
 
 @register_cell_magic
 @needs_local_scope

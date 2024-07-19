@@ -14,9 +14,9 @@ Just copy sqlmagick.py into the same folder as your .ipynb file
 
 -----cell 2-----
 
-%%dump_xls 
+%%dump_files 
 
-C:\temp\errorparser
+C:\temp\errorparser\error*.csv
 
 
 ------cell 3------
