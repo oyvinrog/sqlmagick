@@ -41,17 +41,26 @@ def sql(line, cell, local_ns=None):
     if len(args) > 0:
         # Assuming the first argument is the file path if provided
         parquet_file = args[0]
-    
+
     with sqlite3.connect('sqlmagick.db') as conn:
+        cursor = conn.cursor()
         query = cell.strip()  # SQL query from the cell
-        result = pd.read_sql_query(query, conn)
+        query_type = query.split()[0].upper()  # Determine the type of SQL statement
         
-        if parquet_file:
-            # Save result to a Parquet file
-            result.to_parquet(parquet_file)
-            print(f"Query result saved to {parquet_file}")
+        if query_type in ['UPDATE', 'DELETE', 'INSERT']:
+            # Handle DML statements
+            cursor.execute(query)
+            conn.commit()
+            print(f"{query_type} executed successfully.")
         else:
-            return result
+            # Handle other SQL queries and return result as a dataframe
+            result = pd.read_sql_query(query, conn)
+            if parquet_file:
+                # Save result to a Parquet file
+                result.to_parquet(parquet_file)
+                print(f"Query result saved to {parquet_file}")
+            else:
+                return result
 
 def load_ipython_extension(ipython):
     # Register the magic function with IPython
