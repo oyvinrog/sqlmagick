@@ -62,11 +62,6 @@ def sql(line, cell, local_ns=None):
             else:
                 return result
 
-def load_ipython_extension(ipython):
-    # Register the magic function with IPython
-    ipython.register_magic_function(sql, 'cell')
-
-
 @register_cell_magic
 @needs_local_scope
 def dump_files(line, cell, local_ns=None):
@@ -187,3 +182,14 @@ def createtemp(line, cell, local_ns=None):
         df = pd.read_sql_query(sql_query, conn)  # Execute the query and store the result in a DataFrame
         df.to_sql(table_name, conn, if_exists='replace', index=False)  # Create a new table from the DataFrame
         print(f"Temporary table {table_name} created successfully with data from query")
+
+def load_ipython_extension(ipython):
+    # Register the magic functions with IPython
+    ipython.register_magic_function(sql, 'cell')
+    ipython.register_magic_function(dump_files, 'cell')
+    ipython.register_magic_function(dump_df, 'cell')
+    ipython.register_magic_function(load_df, 'cell')
+    ipython.register_magic_function(createtemp, 'cell')
+
+def unload_ipython_extension(ipython):
+    pass
