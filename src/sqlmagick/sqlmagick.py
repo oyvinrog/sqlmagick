@@ -6,6 +6,7 @@ How to load from notebook: %load_ext sqlmagick
 %%sql - Execute SQL queries and return the result as a Pandas DataFrame.
     
                 Parameters: optional file path for saving the result as a Parquet file
+                If you suffix as .delta, it will save as a delta table
 
 %%dump_files - Load Excel, CSV, and Parquet files from a folder for querying. Parameters: folder path
                TIP: if you just want to use the current directory, just use %%dump_files with a dot (.)
@@ -30,20 +31,19 @@ from IPython import get_ipython
 from IPython.display import display, HTML
 import re
 import glob
+from deltalake.writer import write_deltalake
 
 @register_cell_magic
 @needs_local_scope
 def sql(line, cell, local_ns=None):
     # Split the line to get any potential file path for dumping the result
     args = line.split()
-    parquet_file = None
+    output_file = None
     if len(args) > 0:
         # Assuming the first argument is the file path if provided
-        parquet_file = args[0]
+        output_file = args[0]
 
     try:
-
-
         # Reopen the connection
         with sqlite3.connect('sqlmagick.db') as conn:
             cursor = conn.cursor()
@@ -58,10 +58,17 @@ def sql(line, cell, local_ns=None):
             else:
                 # Handle other SQL queries and return result as a dataframe
                 result = pd.read_sql_query(query, conn)
-                if parquet_file:
-                    # Save result to a Parquet file
-                    result.to_parquet(parquet_file)
-                    print(f"Query result saved to {parquet_file}")
+                if output_file:
+                    if output_file.endswith('.parquet'):
+                        # Save result to a Parquet file
+                        result.to_parquet(output_file)
+                        print(f"Query result saved to {output_file}")
+                    elif output_file.endswith('.delta'):
+                        # Save result to a Delta table
+                        write_deltalake(output_file, result)
+                        print(f"Query result saved to Delta table at {output_file}")
+                    else:
+                        print(f"Unsupported file format: {output_file}")
                 else:
                     return result
     except Exception as e:

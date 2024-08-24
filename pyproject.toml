@@ -23,7 +23,8 @@ dependencies = [
     "tqdm",
     "jupyter",
     "ipywidgets",
-    "pyarrow"
+    "pyarrow",
+    "deltalake"
 ]
 
 [project.optional-dependencies]
