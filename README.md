@@ -23,6 +23,17 @@ source venv/bin/activate
 pip install git+https://github.com/oyvinrog/sqlmagick.git
 ```
 
+## Setting up "Query with SQLMagick" for Windows 
+
+To set up the ability to right click on a file and query it with SQLMagick, follow these steps:
+
+1. Run cmd as administrator.
+2. Run setup_registry.bat 
+
+If you regret, run disable_registry.bat.
+
+
+
 ## Example Usage
 
 ### Cell 1: Load SQLMagick Extension
