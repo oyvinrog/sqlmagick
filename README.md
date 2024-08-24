@@ -68,6 +68,18 @@ SELECT * FROM output_sheet1
 WHERE error_message LIKE '%infinite recursion%'
 ```
 
+### Cell 5: Output Results to a Delta Table
+
+In this example, we output the results to `strange_errors.delta`:
+
+```sql
+%%sql strange_errors.delta
+
+SELECT * FROM output_sheet1
+WHERE error_message LIKE '%infinite recursion%'
+```
+
+
 ## Creating Temporary Tables
 
 To create a temporary table in the database, use the following syntax:
