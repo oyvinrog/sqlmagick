@@ -163,7 +163,11 @@ def dump_files(line, cell, local_ns=None):
                     traceback.print_exc()
 
         # Additional step to handle .delta folders
-        delta_folders = glob.glob(os.path.join(pattern, '*.delta'), recursive=True)
+        if os.path.isdir(pattern) and pattern.endswith('.delta'):
+            delta_folders = [pattern]
+        else:
+            delta_folders = glob.glob(os.path.join(pattern, '*.delta'), recursive=True)
+        
         for delta_folder in delta_folders:
             try:
                 # Use duckdb to read the Delta table
