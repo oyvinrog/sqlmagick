@@ -29,7 +29,6 @@ from IPython.core.magic import (register_line_magic, register_cell_magic, regist
 from IPython import get_ipython
 from IPython.display import display, HTML
 import re
-from tqdm.notebook import tqdm
 import glob
 
 @register_cell_magic
@@ -42,25 +41,32 @@ def sql(line, cell, local_ns=None):
         # Assuming the first argument is the file path if provided
         parquet_file = args[0]
 
-    with sqlite3.connect('sqlmagick.db') as conn:
-        cursor = conn.cursor()
-        query = cell.strip()  # SQL query from the cell
-        query_type = query.split()[0].upper()  # Determine the type of SQL statement
-        
-        if query_type in ['UPDATE', 'DELETE', 'INSERT']:
-            # Handle DML statements
-            cursor.execute(query)
-            conn.commit()
-            print(f"{query_type} executed successfully.")
-        else:
-            # Handle other SQL queries and return result as a dataframe
-            result = pd.read_sql_query(query, conn)
-            if parquet_file:
-                # Save result to a Parquet file
-                result.to_parquet(parquet_file)
-                print(f"Query result saved to {parquet_file}")
+    try:
+
+
+        # Reopen the connection
+        with sqlite3.connect('sqlmagick.db') as conn:
+            cursor = conn.cursor()
+            query = cell.strip()  # SQL query from the cell
+            query_type = query.split()[0].upper()  # Determine the type of SQL statement
+            
+            if query_type in ['UPDATE', 'DELETE', 'INSERT']:
+                # Handle DML statements
+                cursor.execute(query)
+                conn.commit()
+                print(f"{query_type} executed successfully.")
             else:
-                return result
+                # Handle other SQL queries and return result as a dataframe
+                result = pd.read_sql_query(query, conn)
+                if parquet_file:
+                    # Save result to a Parquet file
+                    result.to_parquet(parquet_file)
+                    print(f"Query result saved to {parquet_file}")
+                else:
+                    return result
+    except Exception as e:
+        print(f"An error occurred in %%sql: {str(e)}")
+        traceback.print_exc()
 
 @register_cell_magic
 @needs_local_scope
@@ -70,80 +76,91 @@ def dump_files(line, cell, local_ns=None):
     db_path = 'sqlmagick.db'
     
     # Connect to the SQLite database
-    with sqlite3.connect(db_path) as conn:
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
         # Use glob to match patterns and collect files
         files_to_process = glob.glob(pattern, recursive=True)
         files_to_process = [file for file in files_to_process if file.endswith(('.xlsx', '.xls', '.csv', '.parquet'))]
         
-        # Initialize tqdm progress bar
-        with tqdm(total=len(files_to_process), desc="Processing files", unit="file") as pbar:
-            for file_path in files_to_process:
-                file = os.path.basename(file_path)
-                if file.endswith('.xlsx') or file.endswith('.xls'):
-                    try:
-                        # Load each sheet into the database
-                        xls = pd.ExcelFile(file_path)
-                        for sheet_name in xls.sheet_names:
-                            print(f"Reading \"{sheet_name}\" from {file}")
-                            try:
-                                df = pd.read_excel(file_path, sheet_name=sheet_name)
-                                # Sanitize column names
-                                df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
-                                # Create a normalized table name based on the file and sheet names
-                                table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}_{sheet_name.replace(' ', '_')}"
-                                # Remove <>
-                                table_name = re.sub(r'<|>', '', table_name)
-                                print(f"Loading {sheet_name} from {file} into {table_name}")
-                                if len(df.columns) == 0:
-                                    print(f"Warning: {file} has no columns. Skipping.")
-                                    continue 
+        for file_path in files_to_process:
+            file = os.path.basename(file_path)
+            if file.endswith('.xlsx') or file.endswith('.xls'):
+                try:
+                    # Load each sheet into the database
+                    xls = pd.ExcelFile(file_path)
+                    for sheet_name in xls.sheet_names:
+                        print(f"Reading \"{sheet_name}\" from {file}")
+                        try:
+                            df = pd.read_excel(file_path, sheet_name=sheet_name)
+                            # Sanitize column names
+                            df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
+                            # Create a normalized table name based on the file and sheet names
+                            table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}_{sheet_name.replace(' ', '_')}"
+                            # Remove <>
+                            table_name = re.sub(r'<|>', '', table_name)
+                            print(f"Loading {sheet_name} from {file} into {table_name}")
+                            if len(df.columns) == 0:
+                                print(f"Warning: {file} has no columns. Skipping.")
+                                continue 
 
-                                df.to_sql(table_name, conn, if_exists='replace', index=False)
-                                
-                                display(HTML(f"<span style='background-color: green;'>Loaded {sheet_name} from {file} into {table_name}</span>"))
-                            except Exception as e:
-                                print(f"Failed to load sheet {sheet_name} from {file}: {str(e)}")
-                                display(HTML(f"<span style='background-color: yellow;'>Warning: Failed to load sheet {sheet_name} from {file}</span>"))
-                                # Show stack trace
-                                traceback.print_exc()
-                    
-                    except Exception as e:
-                        print(f"Failed to load {file_path}: {str(e)}")
-                        # Show stack trace
-                        traceback.print_exc()
+                            df.to_sql(table_name, conn, if_exists='replace', index=False)
+                            
+                            display(HTML(f"<span style='background-color: green;'>Loaded {sheet_name} from {file} into {table_name}</span>"))
+                            print("Closing connection")
+                            conn.close()
 
-                elif file.endswith(".csv"):
-                    try:
-                        df = pd.read_csv(file_path)
-                        # Sanitize column names
-                        df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
-                        # Create a normalized table name based on the file name
-                        table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}"
-                        df.to_sql(table_name, conn, if_exists='replace', index=False)
-                        print(f"Loaded {file} into {table_name}")
+                        except Exception as e:
+                            print(f"Failed to load sheet {sheet_name} from {file}: {str(e)}")
+                            display(HTML(f"<span style='background-color: yellow;'>Warning: Failed to load sheet {sheet_name} from {file}</span>"))
+                            # Show stack trace
+                            traceback.print_exc()
                 
-                    except Exception as e:
-                        print(f"Failed to load {file_path}: {str(e)}")
-                        # Show stack trace
-                        traceback.print_exc()
+                except Exception as e:
+                    print(f"Failed to load {file_path}: {str(e)}")
+                    # Show stack trace
+                    traceback.print_exc()
 
-                elif file.endswith(".parquet"):
-                    try:
-                        df = pd.read_parquet(file_path)
-                        # Sanitize column names
-                        df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
-                        # Create a normalized table name based on the file name
-                        table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}"
-                        df.to_sql(table_name, conn, if_exists='replace', index=False)
-                        print(f"Loaded {file} into {table_name}")
-                
-                    except Exception as e:
-                        print(f"Failed to load {file_path}: {str(e)}")
-                        # Show stack trace
-                        traceback.print_exc()
+            elif file.endswith(".csv"):
+                try:
+                    df = pd.read_csv(file_path)
+                    # Sanitize column names
+                    df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
+                    # Create a normalized table name based on the file name
+                    table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}"
 
-                # Update the progress bar
-                pbar.update(1)
+                    df.to_sql(table_name, conn, if_exists='replace', index=False)
+                    print(f"Loaded {file} into {table_name}")
+            
+                except Exception as e:
+                    print(f"Failed to load {file_path}: {str(e)}")
+                    # Show stack trace
+                    traceback.print_exc()
+
+            elif file.endswith(".parquet"):
+                try:
+                    df = pd.read_parquet(file_path)
+                    # Sanitize column names
+                    df.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in df.columns]
+                    # Create a normalized table name based on the file name
+                    table_name = f"{os.path.splitext(file)[0].replace(' ', '_')}"
+                    df.to_sql(table_name, conn, if_exists='replace', index=False)
+                    print(f"Loaded {file} into {table_name}")
+            
+                except Exception as e:
+                    print(f"Failed to load {file_path}: {str(e)}")
+                    # Show stack trace
+                    traceback.print_exc()
+
+    except Exception as e:
+        print(f"An error occurred in %%dump_files: {str(e)}")
+        traceback.print_exc()
+    finally:
+        if conn:
+            conn.close()
+            print("Database connection closed.")
 
 @register_cell_magic
 @needs_local_scope

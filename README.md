@@ -85,3 +85,9 @@ To increase the number of columns displayed in the notebook, use the following P
 ```
 pd.set_option('display.max_columns', 500)
 ```
+
+## Development
+
+If you do a change, reinstall using 
+
+`pip install --upgrade .` from the root directory
