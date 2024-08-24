@@ -32,6 +32,7 @@ from IPython.display import display, HTML
 import re
 import glob
 from deltalake.writer import write_deltalake
+import duckdb
 
 @register_cell_magic
 @needs_local_scope
@@ -160,6 +161,28 @@ def dump_files(line, cell, local_ns=None):
                     print(f"Failed to load {file_path}: {str(e)}")
                     # Show stack trace
                     traceback.print_exc()
+
+        # Additional step to handle .delta folders
+        delta_folders = glob.glob(os.path.join(pattern, '*.delta'), recursive=True)
+        for delta_folder in delta_folders:
+            try:
+                # Use duckdb to read the Delta table
+                con = duckdb.connect()
+                stmt = f"""
+                SELECT *
+                FROM delta_scan('{delta_folder}')
+                """
+                results = con.execute(stmt).fetchdf()
+                # Sanitize column names
+                results.columns = [col.replace(' ', '_').replace('(', '').replace(')', '') for col in results.columns]
+                # Create a normalized table name based on the folder name
+                table_name = os.path.basename(delta_folder).replace('.delta', '').replace(' ', '_')
+                results.to_sql(table_name, conn, if_exists='replace', index=False)
+                print(f"Loaded Delta table from {delta_folder} into {table_name}")
+            except Exception as e:
+                print(f"Failed to load Delta table from {delta_folder}: {str(e)}")
+                # Show stack trace
+                traceback.print_exc()
 
     except Exception as e:
         print(f"An error occurred in %%dump_files: {str(e)}")
